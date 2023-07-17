@@ -26,6 +26,9 @@ Untuk keluar dari program bisa ditambahkan tombol ‘keluar’
 
 ## Screenshots
 
+- DB Scheme
+  ![DB Scheme](https://raw.githubusercontent.com/jamilmuh/TugasPersonal_2_BAD/master/assets/db_schema.png)
+
 - Create
 ![Create](https://raw.githubusercontent.com/jamilmuh/TugasPersonal_2_BAD/master/assets/create.png)
 
