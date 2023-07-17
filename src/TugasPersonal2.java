@@ -7,11 +7,11 @@ import java.sql.*;
 import java.text.SimpleDateFormat;
 
 public class TugasPersonal2 extends JFrame {
-    private JTable table;
-    private DefaultTableModel tableModel;
-    private Connection connection;
-    private Statement statement;
-    private ResultSet resultSet;
+    private JTable tbl;
+    private DefaultTableModel tblModel;
+    private Connection db;
+    private Statement st;
+    private ResultSet rs;
 
     public TugasPersonal2() {
         super("Klinik CRUD Data Pasien");
@@ -21,13 +21,13 @@ public class TugasPersonal2 extends JFrame {
 
         // Buat objek DefaultTableModel dengan kolom yang sesuai
         String[] columnNames = {"No", "Nama Pasien", "NIK", "Tanggal Lahir", "Alamat"};
-        tableModel = new DefaultTableModel(columnNames, 0);
+        tblModel = new DefaultTableModel(columnNames, 0);
 
         // Buat tabel dengan data dari DefaultTableModel
-        table = new JTable(tableModel);
+        tbl = new JTable(tblModel);
 
         // Tambahkan JScrollPane untuk tabel
-        JScrollPane scrollPane = new JScrollPane(table);
+        JScrollPane scrollPane = new JScrollPane(tbl);
 
         // Tambahkan tabel ke dalam frame dengan menggunakan layout BorderLayout
         add(scrollPane, BorderLayout.CENTER);
@@ -97,24 +97,24 @@ public class TugasPersonal2 extends JFrame {
 
         // Membuat koneksi ke database
         try {
-            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_klinik", "root", "");
-            statement = connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
-            resultSet = statement.executeQuery("SELECT * FROM pasien");
+            db = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_klinik", "root", "");
+            st = db.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            rs = st.executeQuery("SELECT * FROM pasien");
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
 
         // Menampilkan data pertama
         try {
-            while (resultSet.next()) {
-                String no = String.valueOf(tableModel.getRowCount() + 1);
-                String nama = resultSet.getString("nama");
-                String nik = resultSet.getString("nik");
-                Date tglLahir = resultSet.getDate("tgl_lahir");
-                String alamat = resultSet.getString("alamat");
+            while (rs.next()) {
+                String no = String.valueOf(tblModel.getRowCount() + 1);
+                String nama = rs.getString("nama");
+                String nik = rs.getString("nik");
+                Date tglLahir = rs.getDate("tgl_lahir");
+                String alamat = rs.getString("alamat");
 
                 Object[] rowData = {no, nama, nik, new SimpleDateFormat("yyyy-MMM-dd").format(tglLahir), alamat};
-                tableModel.addRow(rowData);
+                tblModel.addRow(rowData);
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -135,16 +135,16 @@ public class TugasPersonal2 extends JFrame {
 
                         // Lakukan proses penambahan data ke database
                         String insertQuery = "INSERT INTO pasien (nama, nik, tgl_lahir, alamat) VALUES (?, ?, ?, ?)";
-                        PreparedStatement preparedStatement = connection.prepareStatement(insertQuery);
-                        preparedStatement.setString(1, nama);
-                        preparedStatement.setString(2, nik);
-                        preparedStatement.setDate(3, tglLahir);
-                        preparedStatement.setString(4, alamat);
-                        preparedStatement.executeUpdate();
+                        PreparedStatement pst = db.prepareStatement(insertQuery);
+                        pst.setString(1, nama);
+                        pst.setString(2, nik);
+                        pst.setDate(3, tglLahir);
+                        pst.setString(4, alamat);
+                        pst.executeUpdate();
 
                         // Setelah berhasil tambahkan data baru ke dalam tabel
-                        Object[] rowData = {tableModel.getRowCount() + 1, nama, nik, tglLahirStr, alamat};
-                        tableModel.addRow(rowData);
+                        Object[] rowData = {tblModel.getRowCount() + 1, nama, nik, tglLahirStr, alamat};
+                        tblModel.addRow(rowData);
                     } catch (IllegalArgumentException | SQLException ex) {
                         JOptionPane.showMessageDialog(this, "Gagal menambahkan data pasien.");
                         ex.printStackTrace();
@@ -156,33 +156,36 @@ public class TugasPersonal2 extends JFrame {
 
     // Metode untuk mengupdate data pasien menggunakan dialog input
     private void updateDataDialog() {
-        int selectedRow = table.getSelectedRow();
+        int selectedRow = tbl.getSelectedRow();
         if (selectedRow >= 0) {
             try {
-                resultSet.absolute(selectedRow + 1);
-                String nama = JOptionPane.showInputDialog(this, "Nama Pasien:", resultSet.getString("nama"));
+                rs.absolute(selectedRow + 1);
+                String nama = JOptionPane.showInputDialog(this, "Nama Pasien:", rs.getString("nama"));
                 if (nama != null) {
                     String tglLahirStr = JOptionPane.showInputDialog(this, "Tanggal Lahir (YYYY-MM-DD):",
-                            new SimpleDateFormat("yyyy-MMM-dd").format(resultSet.getDate("tgl_lahir")));
+                            new SimpleDateFormat("yyyy-MMM-dd").format(rs.getDate("tgl_lahir")));
                     if (tglLahirStr != null) {
                         try {
                             Date tglLahir = Date.valueOf(tglLahirStr);
                             String alamat = JOptionPane.showInputDialog(this, "Alamat:",
-                                    resultSet.getString("alamat"));
+                                    rs.getString("alamat"));
 
                             // Lakukan proses update data di database
                             String updateQuery = "UPDATE pasien SET nama = ?, tgl_lahir = ?, alamat = ? WHERE nik = ?";
-                            PreparedStatement preparedStatement = connection.prepareStatement(updateQuery);
-                            preparedStatement.setString(1, nama);
-                            preparedStatement.setDate(2, tglLahir);
-                            preparedStatement.setString(3, alamat);
-                            preparedStatement.setString(4, resultSet.getString("nik"));
-                            preparedStatement.executeUpdate();
+                            PreparedStatement pst = db.prepareStatement(updateQuery);
+                            pst.setString(1, nama);
+                            pst.setDate(2, tglLahir);
+                            pst.setString(3, alamat);
+                            pst.setString(4, rs.getString("nik"));
+                            pst.execute();
+
+                            pst.close();
+                            db.close();
 
                             // Setelah berhasil update data, perbarui tampilan tabel
-                            tableModel.setValueAt(nama, selectedRow, 1);
-                            tableModel.setValueAt(tglLahirStr, selectedRow, 3);
-                            tableModel.setValueAt(alamat, selectedRow, 4);
+                            tblModel.setValueAt(nama, selectedRow, 1);
+                            tblModel.setValueAt(tglLahirStr, selectedRow, 3);
+                            tblModel.setValueAt(alamat, selectedRow, 4);
                         } catch (IllegalArgumentException | SQLException ex) {
                             JOptionPane.showMessageDialog(this, "Gagal mengupdate data pasien.");
                             ex.printStackTrace();
@@ -199,20 +202,22 @@ public class TugasPersonal2 extends JFrame {
 
     // Metode untuk menghapus data pasien
     private void hapusData() {
-        int selectedRow = table.getSelectedRow();
+        int selectedRow = tbl.getSelectedRow();
         if (selectedRow >= 0) {
             try {
-                resultSet.absolute(selectedRow + 1);
-                String nik = resultSet.getString("nik");
+                rs.absolute(selectedRow + 1);
+                String nik = rs.getString("nik");
 
                 // Lakukan proses penghapusan data dari database
                 String deleteQuery = "DELETE FROM pasien WHERE nik = ?";
-                PreparedStatement preparedStatement = connection.prepareStatement(deleteQuery);
-                preparedStatement.setString(1, nik);
-                preparedStatement.executeUpdate();
+                PreparedStatement pst = db.prepareStatement(deleteQuery);
+                pst.setString(1, nik);
+                pst.executeUpdate();
+
+                db.close();
 
                 // Setelah berhasil hapus data, hapus juga dari tampilan tabel
-                tableModel.removeRow(selectedRow);
+                tblModel.removeRow(selectedRow);
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
@@ -223,19 +228,19 @@ public class TugasPersonal2 extends JFrame {
 
     // Method untuk berpindah ke data sebelumnya
     private void prevData() {
-        int selectedRow = table.getSelectedRow();
+        int selectedRow = tbl.getSelectedRow();
         if (selectedRow > 0) {
-            table.setRowSelectionInterval(selectedRow - 1, selectedRow - 1);
-            table.scrollRectToVisible(table.getCellRect(selectedRow - 1, 0, true));
+            tbl.setRowSelectionInterval(selectedRow - 1, selectedRow - 1);
+            tbl.scrollRectToVisible(tbl.getCellRect(selectedRow - 1, 0, true));
         }
     }
 
     // Method untuk berpindah ke data selanjutnya
     private void nextData() {
-        int selectedRow = table.getSelectedRow();
-        if (selectedRow >= 0 && selectedRow < tableModel.getRowCount() - 1) {
-            table.setRowSelectionInterval(selectedRow + 1, selectedRow + 1);
-            table.scrollRectToVisible(table.getCellRect(selectedRow + 1, 0, true));
+        int selectedRow = tbl.getSelectedRow();
+        if (selectedRow >= 0 && selectedRow < tblModel.getRowCount() - 1) {
+            tbl.setRowSelectionInterval(selectedRow + 1, selectedRow + 1);
+            tbl.scrollRectToVisible(tbl.getCellRect(selectedRow + 1, 0, true));
         }
     }
 
@@ -249,11 +254,11 @@ public class TugasPersonal2 extends JFrame {
         JPanel panel = new JPanel();
 
         String[] columnNames = {"No", "Nama Pasien", "NIK", "Tanggal Lahir", "Alamat"};
-        Object[][] data = new Object[tableModel.getRowCount()][5];
+        Object[][] data = new Object[tblModel.getRowCount()][5];
 
-        for (int i = 0; i < tableModel.getRowCount(); i++) {
+        for (int i = 0; i < tblModel.getRowCount(); i++) {
             for (int j = 0; j < 5; j++) {
-                data[i][j] = tableModel.getValueAt(i, j);
+                data[i][j] = tblModel.getValueAt(i, j);
             }
         }
 
