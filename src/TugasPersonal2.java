@@ -9,7 +9,7 @@ import java.text.SimpleDateFormat;
 public class TugasPersonal2 extends JFrame {
     private JTable tbl;
     private DefaultTableModel tblModel;
-    private Connection db;
+    private DBConnection db;
     private Statement st;
     private ResultSet rs;
 
@@ -97,9 +97,9 @@ public class TugasPersonal2 extends JFrame {
 
         // Membuat koneksi ke database
         try {
-            db = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_klinik", "root", "");
-            st = db.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
-            rs = st.executeQuery("SELECT * FROM pasien");
+            db = new DBConnection();
+            st = db.connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            rs = st.executeQuery(DBConnection.selectSQL);
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
@@ -134,8 +134,7 @@ public class TugasPersonal2 extends JFrame {
                         String alamat = JOptionPane.showInputDialog(this, "Alamat:");
 
                         // Lakukan proses penambahan data ke database
-                        String insertQuery = "INSERT INTO pasien (nama, nik, tgl_lahir, alamat) VALUES (?, ?, ?, ?)";
-                        PreparedStatement pst = db.prepareStatement(insertQuery);
+                        PreparedStatement pst = db.connection.prepareStatement(DBConnection.insertSQL);
                         pst.setString(1, nama);
                         pst.setString(2, nik);
                         pst.setDate(3, tglLahir);
@@ -146,7 +145,7 @@ public class TugasPersonal2 extends JFrame {
                         Object[] rowData = {tblModel.getRowCount() + 1, nama, nik, tglLahirStr, alamat};
                         tblModel.addRow(rowData);
                     } catch (IllegalArgumentException | SQLException ex) {
-                        JOptionPane.showMessageDialog(this, "Gagal menambahkan data pasien.");
+                        JOptionPane.showMessageDialog(this, "Gagal menambahkan data pasien. "+ ex.getMessage());
                         ex.printStackTrace();
                     }
                 }
@@ -171,8 +170,7 @@ public class TugasPersonal2 extends JFrame {
                                     rs.getString("alamat"));
 
                             // Lakukan proses update data di database
-                            String updateQuery = "UPDATE pasien SET nama = ?, tgl_lahir = ?, alamat = ? WHERE nik = ?";
-                            PreparedStatement pst = db.prepareStatement(updateQuery);
+                            PreparedStatement pst = db.connection.prepareStatement(DBConnection.updateSQL);
                             pst.setString(1, nama);
                             pst.setDate(2, tglLahir);
                             pst.setString(3, alamat);
@@ -180,14 +178,14 @@ public class TugasPersonal2 extends JFrame {
                             pst.execute();
 
                             pst.close();
-                            db.close();
+                            db.connection.close();
 
                             // Setelah berhasil update data, perbarui tampilan tabel
                             tblModel.setValueAt(nama, selectedRow, 1);
                             tblModel.setValueAt(tglLahirStr, selectedRow, 3);
                             tblModel.setValueAt(alamat, selectedRow, 4);
                         } catch (IllegalArgumentException | SQLException ex) {
-                            JOptionPane.showMessageDialog(this, "Gagal mengupdate data pasien.");
+                            JOptionPane.showMessageDialog(this, "Gagal mengupdate data pasien."+ ex.getMessage());
                             ex.printStackTrace();
                         }
                     }
@@ -209,12 +207,11 @@ public class TugasPersonal2 extends JFrame {
                 String nik = rs.getString("nik");
 
                 // Lakukan proses penghapusan data dari database
-                String deleteQuery = "DELETE FROM pasien WHERE nik = ?";
-                PreparedStatement pst = db.prepareStatement(deleteQuery);
+                PreparedStatement pst = db.connection.prepareStatement(DBConnection.deleteSQL);
                 pst.setString(1, nik);
                 pst.executeUpdate();
 
-                db.close();
+                db.connection.close();
 
                 // Setelah berhasil hapus data, hapus juga dari tampilan tabel
                 tblModel.removeRow(selectedRow);
